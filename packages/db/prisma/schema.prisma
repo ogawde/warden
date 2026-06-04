@@ -1,0 +1,248 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ScanStatus {
+  QUEUED
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum ScanTrigger {
+  MANUAL
+}
+
+enum FindingCategory {
+  MISSING_TESTS
+  MAINTAINABILITY
+  TECHNICAL_DEBT
+  RISKY_CHANGE
+  CI_CD
+}
+
+enum FindingSeverity {
+  CRITICAL
+  HIGH
+  MEDIUM
+  LOW
+  INFO
+}
+
+enum FindingSource {
+  STATIC
+  AGENT
+  HYBRID
+}
+
+enum ProposedActionType {
+  CREATE_ISSUE
+}
+
+enum ProposedActionStatus {
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
+  EXECUTING
+  EXECUTED
+  FAILED
+}
+
+enum ApprovalDecision {
+  APPROVED
+  REJECTED
+}
+
+enum ExecutionStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+}
+
+enum ActivityActorType {
+  USER
+  AGENT
+  SYSTEM
+}
+
+enum ActivityVerb {
+  SCAN_STARTED
+  SCAN_COMPLETED
+  SCAN_FAILED
+  PROPOSAL_CREATED
+  PROPOSAL_APPROVED
+  PROPOSAL_REJECTED
+  ISSUE_CREATED
+  AGENT_TOOL_CALLED
+}
+
+model User {
+  id            String          @id @default(cuid())
+  email         String          @unique
+  name          String?
+  createdAt     DateTime        @default(now())
+  scans         Scan[]
+  approvals     Approval[]
+  activity      ActivityEvent[]
+}
+
+model Repository {
+  id                 String           @id @default(cuid())
+  gitlabProjectId    Int
+  pathWithNamespace  String
+  name               String
+  defaultBranch      String           @default("main")
+  webUrl             String?
+  gitlabInstance     String           @default("https://gitlab.com")
+  tokenHint          String?
+  monitoringEnabled  Boolean          @default(true)
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  scans              Scan[]
+  findings           Finding[]
+  proposedActions    ProposedAction[]
+  issueCreations     IssueCreation[]
+  activity           ActivityEvent[]
+
+  @@unique([gitlabProjectId])
+  @@index([createdAt])
+}
+
+model Scan {
+  id              String       @id @default(cuid())
+  repositoryId    String
+  status          ScanStatus   @default(QUEUED)
+  trigger         ScanTrigger  @default(MANUAL)
+  triggeredById   String?
+  correlationId   String       @unique @default(cuid())
+  baseCommitSha   String?
+  headCommitSha   String?
+  agentStatus     String?
+  agentDegraded   Boolean      @default(false)
+  agentError      String?
+  promptVersion   String       @default("warden-mvp-1.0")
+  mcpAudit        Json         @default("[]")
+  contextSnapshot Json?
+  queuedAt        DateTime     @default(now())
+  startedAt       DateTime?
+  completedAt     DateTime?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  repository      Repository   @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+  triggeredBy     User?        @relation(fields: [triggeredById], references: [id])
+  findings        Finding[]
+  proposedActions ProposedAction[]
+  activity        ActivityEvent[]
+
+  @@index([repositoryId, createdAt(sort: Desc)])
+  @@index([status])
+}
+
+model Finding {
+  id            String          @id @default(cuid())
+  scanId        String
+  repositoryId  String
+  category      FindingCategory
+  severity      FindingSeverity
+  confidence    Decimal         @db.Decimal(4, 3)
+  source        FindingSource
+  title         String
+  description   String          @db.Text
+  priorityScore Int             @default(0)
+  priorityReason String?
+  evidence      Json            @default("[]")
+  createdAt     DateTime        @default(now())
+
+  scan          Scan            @relation(fields: [scanId], references: [id], onDelete: Cascade)
+  repository    Repository      @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+
+  @@index([scanId, priorityScore(sort: Desc)])
+  @@index([scanId, category])
+}
+
+model ProposedAction {
+  id                  String               @id @default(cuid())
+  scanId              String
+  repositoryId        String
+  type                ProposedActionType   @default(CREATE_ISSUE)
+  status              ProposedActionStatus @default(PENDING_APPROVAL)
+  title               String
+  summary             String               @db.Text
+  priorityScore       Int                  @default(0)
+  findingIds          String[]
+  gitlabIssueTemplate Json
+  idempotencyKey      String?              @unique
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+
+  scan                Scan                 @relation(fields: [scanId], references: [id], onDelete: Cascade)
+  repository          Repository           @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+  approvals           Approval[]
+  issueCreation       IssueCreation?
+  activity            ActivityEvent[]
+
+  @@index([scanId])
+  @@index([repositoryId, status])
+}
+
+model Approval {
+  id               String           @id @default(cuid())
+  proposedActionId String
+  userId           String
+  decision         ApprovalDecision
+  comment          String?          @db.Text
+  createdAt        DateTime         @default(now())
+
+  proposedAction   ProposedAction   @relation(fields: [proposedActionId], references: [id], onDelete: Cascade)
+  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([proposedActionId, createdAt(sort: Desc)])
+}
+
+model IssueCreation {
+  id               String          @id @default(cuid())
+  proposedActionId String          @unique
+  repositoryId     String
+  status           ExecutionStatus @default(PENDING)
+  gitlabProjectId  Int
+  gitlabIssueIid   Int?
+  gitlabIssueId    Int?
+  webUrl           String?
+  idempotencyKey   String          @unique
+  errorMessage     String?
+  executedAt       DateTime?
+  createdAt        DateTime        @default(now())
+
+  proposedAction   ProposedAction  @relation(fields: [proposedActionId], references: [id], onDelete: Cascade)
+  repository       Repository      @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+
+  @@index([repositoryId, createdAt(sort: Desc)])
+}
+
+model ActivityEvent {
+  id               String            @id @default(cuid())
+  repositoryId     String?
+  scanId           String?
+  proposedActionId String?
+  actorType        ActivityActorType
+  actorUserId      String?
+  verb             ActivityVerb
+  summary          String
+  metadata         Json              @default("{}")
+  createdAt        DateTime          @default(now())
+
+  repository       Repository?       @relation(fields: [repositoryId], references: [id], onDelete: SetNull)
+  scan             Scan?             @relation(fields: [scanId], references: [id], onDelete: SetNull)
+  proposedAction   ProposedAction?   @relation(fields: [proposedActionId], references: [id], onDelete: SetNull)
+  actorUser        User?             @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([repositoryId, createdAt(sort: Desc)])
+}
