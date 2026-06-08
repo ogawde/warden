@@ -1,0 +1,127 @@
+import { createIssue } from "@/lib/gitlab/create-issue";
+import { getGitLabConfig } from "@/lib/gitlab/config";
+import { prisma } from "@/lib/db";
+import { randomUUID } from "crypto";
+
+export type ExecuteProposedActionResult = {
+  issueCreationId: string;
+  webUrl: string;
+  gitlabIssueIid: number;
+};
+
+export async function executeProposedAction(
+  proposedActionId: string
+): Promise<ExecuteProposedActionResult> {
+  const config = getGitLabConfig();
+
+  const proposedAction = await prisma.proposedAction.findUnique({
+    where: { id: proposedActionId },
+    include: { approvals: true, issueCreation: true }
+  });
+
+  if (!proposedAction) {
+    throw new Error("Proposed action not found");
+  }
+
+  if (proposedAction.status !== "APPROVED") {
+    throw new Error("Proposed action must be approved before execution");
+  }
+
+  if (proposedAction.approvals.length === 0) {
+    throw new Error("Approval record required before execution");
+  }
+
+  if (proposedAction.issueCreation) {
+    throw new Error("Issue already created for this proposal");
+  }
+
+  const template = proposedAction.gitlabIssueTemplate as {
+    title: string;
+    description: string;
+    labels?: string[];
+  };
+
+  const idempotencyKey = proposedAction.idempotencyKey ?? randomUUID();
+
+  await prisma.proposedAction.update({
+    where: { id: proposedAction.id },
+    data: {
+      status: "EXECUTING",
+      idempotencyKey
+    }
+  });
+
+  const issueCreation = await prisma.issueCreation.create({
+    data: {
+      proposedActionId: proposedAction.id,
+      repositoryId: proposedAction.repositoryId,
+      status: "PENDING",
+      gitlabProjectId: config.projectId,
+      idempotencyKey
+    }
+  });
+
+  try {
+    const gitlabIssue = await createIssue(
+      {
+        title: template.title,
+        description: template.description,
+        labels: template.labels ?? ["warden"]
+      },
+      config
+    );
+
+    await prisma.$transaction([
+      prisma.issueCreation.update({
+        where: { id: issueCreation.id },
+        data: {
+          status: "SUCCEEDED",
+          gitlabIssueIid: gitlabIssue.iid,
+          gitlabIssueId: gitlabIssue.id,
+          webUrl: gitlabIssue.webUrl,
+          executedAt: new Date()
+        }
+      }),
+      prisma.proposedAction.update({
+        where: { id: proposedAction.id },
+        data: { status: "EXECUTED" }
+      }),
+      prisma.activityEvent.create({
+        data: {
+          repositoryId: proposedAction.repositoryId,
+          scanId: proposedAction.scanId,
+          proposedActionId: proposedAction.id,
+          actorType: "SYSTEM",
+          verb: "ISSUE_CREATED",
+          summary: `Created GitLab issue #${gitlabIssue.iid}`,
+          metadata: { webUrl: gitlabIssue.webUrl }
+        }
+      })
+    ]);
+
+    return {
+      issueCreationId: issueCreation.id,
+      webUrl: gitlabIssue.webUrl,
+      gitlabIssueIid: gitlabIssue.iid
+    };
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Unknown GitLab error";
+
+    await prisma.$transaction([
+      prisma.issueCreation.update({
+        where: { id: issueCreation.id },
+        data: {
+          status: "FAILED",
+          errorMessage: message
+        }
+      }),
+      prisma.proposedAction.update({
+        where: { id: proposedAction.id },
+        data: { status: "FAILED" }
+      })
+    ]);
+
+    throw error;
+  }
+}

@@ -1,48 +1,90 @@
-import { APP_NAME, FINDING_CATEGORIES } from "@warden/contracts";
+import Link from "next/link";
+import { RunScanButton } from "@/components/run-scan-button";
+import { CreateTestIssueButton } from "@/components/create-test-issue-button";
+import { APP_NAME } from "@warden/contracts";
+import { prisma } from "@/lib/db";
 
-const seedRepository = {
-  name: "warden-demo/debt-lab",
-  defaultBranch: "main",
-  monitoringEnabled: true
-};
+export const dynamic = "force-dynamic";
 
-export default function RepositoryDashboardPage() {
+export default async function RepositoryDashboardPage() {
+  const repository = await prisma.repository.findFirst({
+    orderBy: { createdAt: "asc" }
+  });
+
+  if (!repository) {
+    return (
+      <main className="mx-auto min-h-screen max-w-4xl px-6 py-12">
+        <h1 className="text-3xl font-semibold tracking-tight text-slate-900">
+          {APP_NAME}
+        </h1>
+        <p className="mt-4 text-sm text-slate-600">
+          No repository in database. Run{" "}
+          <code className="rounded bg-slate-100 px-1">npm run db:seed</code>.
+        </p>
+      </main>
+    );
+  }
+
+  const latestScan = await prisma.scan.findFirst({
+    where: { repositoryId: repository.id },
+    orderBy: { createdAt: "desc" }
+  });
+
   return (
     <main className="mx-auto min-h-screen max-w-4xl px-6 py-12">
       <h1 className="text-3xl font-semibold tracking-tight text-slate-900">
-        {APP_NAME} Repository Dashboard
+        {APP_NAME}
       </h1>
       <p className="mt-2 text-sm text-slate-600">
-        Milestone M0 placeholder dashboard for a single monitored repository.
+        {repository.pathWithNamespace}
       </p>
 
       <section className="mt-8 rounded-lg border border-slate-200 bg-white p-6">
-        <h2 className="text-lg font-medium text-slate-900">Repository</h2>
-        <dl className="mt-4 grid gap-3 text-sm text-slate-700">
-          <div className="flex justify-between">
-            <dt>Name</dt>
-            <dd>{seedRepository.name}</dd>
+        <dl className="grid gap-3 text-sm text-slate-700">
+          <div className="flex justify-between gap-4">
+            <dt className="text-slate-500">Default branch</dt>
+            <dd>{repository.defaultBranch}</dd>
           </div>
-          <div className="flex justify-between">
-            <dt>Default branch</dt>
-            <dd>{seedRepository.defaultBranch}</dd>
+          <div className="flex justify-between gap-4">
+            <dt className="text-slate-500">GitLab project ID</dt>
+            <dd>{repository.gitlabProjectId}</dd>
           </div>
-          <div className="flex justify-between">
-            <dt>Monitoring</dt>
-            <dd>{seedRepository.monitoringEnabled ? "Enabled" : "Disabled"}</dd>
+          <div className="flex justify-between gap-4">
+            <dt className="text-slate-500">Monitoring</dt>
+            <dd>{repository.monitoringEnabled ? "Enabled" : "Disabled"}</dd>
           </div>
         </dl>
       </section>
 
       <section className="mt-6 rounded-lg border border-slate-200 bg-white p-6">
-        <h2 className="text-lg font-medium text-slate-900">
-          MVP Finding Categories
-        </h2>
-        <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-slate-700">
-          {FINDING_CATEGORIES.map((category) => (
-            <li key={category}>{category}</li>
-          ))}
-        </ul>
+        <h2 className="text-lg font-medium text-slate-900">Scan</h2>
+        <p className="mt-2 text-sm text-slate-600">
+          Queues a scan on the worker (run{" "}
+          <code className="rounded bg-slate-100 px-1">npm run dev:worker</code>
+          ). Analyzes your local clone via{" "}
+          <code className="rounded bg-slate-100 px-1">REPO_LOCAL_PATH</code>.
+        </p>
+        <div className="mt-4">
+          <RunScanButton />
+        </div>
+        {latestScan ? (
+          <p className="mt-3 text-sm text-slate-600">
+            Latest scan:{" "}
+            <Link
+              href={`/scans/${latestScan.id}`}
+              className="font-medium text-slate-900 underline"
+            >
+              {latestScan.status} · {latestScan.createdAt.toLocaleString()}
+            </Link>
+          </p>
+        ) : null}
+      </section>
+
+      <section className="mt-6 rounded-lg border border-dashed border-slate-200 bg-slate-50 p-6">
+        <h2 className="text-sm font-medium text-slate-700">M1 dev shortcut</h2>
+        <div className="mt-3">
+          <CreateTestIssueButton />
+        </div>
       </section>
     </main>
   );

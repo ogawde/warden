@@ -1,0 +1,20 @@
+{
+  "name": "@warden/worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts"
+  },
+  "dependencies": {
+    "@warden/db": "file:../../packages/db",
+    "@warden/scan": "file:../../packages/scan",
+    "dotenv": "16.4.7"
+  },
+  "devDependencies": {
+    "@types/node": "22.15.21",
+    "tsx": "4.19.4",
+    "typescript": "5.8.3"
+  }
+}

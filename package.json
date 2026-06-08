@@ -4,10 +4,12 @@
   "version": "0.1.0",
   "workspaces": [
     "apps/*",
-    "packages/*"
+    "packages/*",
+    "services/*"
   ],
   "scripts": {
     "dev": "npm run dev -w @warden/web",
+    "dev:worker": "npm run dev -w @warden/worker",
     "build": "npm run build -w @warden/web",
     "start": "npm run start -w @warden/web",
     "lint": "npm run lint -w @warden/web",

@@ -1,0 +1,16 @@
+{
+  "name": "@warden/agent-platform",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "dependencies": {
+    "@warden/gitlab-mcp": "file:../gitlab-mcp",
+    "dotenv": "16.4.7",
+    "google-auth-library": "9.15.1"
+  },
+  "devDependencies": {
+    "typescript": "5.8.3"
+  }
+}
