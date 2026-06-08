@@ -12,11 +12,16 @@ async function main() {
     }
   });
 
+  const gitlabProjectId = Number.parseInt(
+    process.env.GITLAB_PROJECT_ID ?? "12345678",
+    10
+  );
+
   await prisma.repository.upsert({
-    where: { gitlabProjectId: 12345678 },
+    where: { gitlabProjectId },
     update: {},
     create: {
-      gitlabProjectId: 12345678,
+      gitlabProjectId,
       pathWithNamespace: "warden-demo/debt-lab",
       name: "debt-lab",
       defaultBranch: "main",
