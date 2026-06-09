@@ -68,12 +68,15 @@ async function handleRunScan(
 
   const { scanId, repositoryId } = body;
 
-  sendJson(response, 202, { ok: true, scanId, status: "accepted" });
-
-  void executeScanJob({ scanId, repositoryId }).catch((error) => {
+  // TODO REMOVE AFTER DEBUGGING — await scan so response includes result
+  try {
+    const result = await executeScanJob({ scanId, repositoryId });
+    sendJson(response, 200, { ok: true, result });
+  } catch (error) {
     const message = error instanceof Error ? error.message : "Scan job failed";
     console.error(`[worker] scan ${scanId} failed:`, message);
-  });
+    sendJson(response, 500, { ok: false, error: message });
+  }
 }
 
 const server = http.createServer(async (request, response) => {
