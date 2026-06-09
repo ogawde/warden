@@ -1,6 +1,7 @@
 import http from "node:http";
 import { executeScanJob } from "@warden/scan";
 import { isAuthorized } from "./auth";
+import { handleDebugDb } from "./debug-db";
 import { loadWorkerEnv } from "./load-env";
 
 loadWorkerEnv();
@@ -80,6 +81,12 @@ const server = http.createServer(async (request, response) => {
 
   if (request.method === "GET" && url.pathname === "/health") {
     sendJson(response, 200, { ok: true, service: "warden-worker" });
+    return;
+  }
+
+  // TODO REMOVE AFTER DEBUGGING
+  if (request.method === "GET" && url.pathname === "/debug-db") {
+    await handleDebugDb(response);
     return;
   }
 
