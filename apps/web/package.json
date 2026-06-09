@@ -13,7 +13,7 @@
     "@warden/db": "file:../../packages/db",
     "@warden/scan": "file:../../packages/scan",
     "dotenv": "16.4.7",
-    "next": "15.3.3",
+    "next": "15.3.8",
     "react": "19.0.0",
     "react-dom": "19.0.0"
   },
