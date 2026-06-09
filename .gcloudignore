@@ -1,0 +1,16 @@
+# Cloud Build upload rules.
+# package-lock.json is gitignored but required for `npm ci` in the worker Dockerfile.
+!package-lock.json
+
+node_modules/
+.next/
+dist/
+build/
+coverage/
+*.log
+.env
+.env.*
+.git/
+.venv/
+apps/web/.next/
+packages/db/generated/
