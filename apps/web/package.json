@@ -13,6 +13,7 @@
     "@warden/db": "file:../../packages/db",
     "@warden/scan": "file:../../packages/scan",
     "dotenv": "16.4.7",
+    "iron-session": "8.0.4",
     "next": "15.5.19",
     "react": "19.2.7",
     "react-dom": "19.2.7"
