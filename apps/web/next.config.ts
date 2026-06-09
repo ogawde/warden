@@ -4,6 +4,8 @@ import { loadEnvConfig } from "@next/env";
 
 loadEnvConfig(path.resolve(__dirname, "../.."));
 
-const nextConfig: NextConfig = {};
+const nextConfig: NextConfig = {
+  outputFileTracingRoot: path.resolve(__dirname, "../..")
+};
 
 export default nextConfig;
