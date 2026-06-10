@@ -86,13 +86,20 @@ enum ActivityVerb {
 }
 
 model User {
-  id            String          @id @default(cuid())
-  email         String          @unique
-  name          String?
-  createdAt     DateTime        @default(now())
-  scans         Scan[]
-  approvals     Approval[]
-  activity      ActivityEvent[]
+  id               String          @id @default(cuid())
+  email            String          @unique
+  name             String?
+  gitlabUserId     Int?            @unique
+  gitlabUsername   String?
+  avatarUrl        String?
+  accessTokenEnc   String?         @db.Text
+  refreshTokenEnc  String?         @db.Text
+  tokenExpiresAt   DateTime?
+  lastLoginAt      DateTime?
+  createdAt        DateTime        @default(now())
+  scans            Scan[]
+  approvals        Approval[]
+  activity         ActivityEvent[]
 }
 
 model Repository {
