@@ -55,8 +55,14 @@ export function getSessionOptions(): SessionOptions {
   };
 }
 
+type CookieStore = Awaited<ReturnType<typeof cookies>>;
+
+/** Open the sealed session using an existing App Router cookie store. */
+export async function openWardenSession(cookieStore: CookieStore) {
+  return getIronSession<WardenSessionData>(cookieStore, getSessionOptions());
+}
+
 /** Open the sealed session from Next.js App Router cookies. */
 export async function getWardenSession() {
-  const cookieStore = await cookies();
-  return getIronSession<WardenSessionData>(cookieStore, getSessionOptions());
+  return openWardenSession(await cookies());
 }

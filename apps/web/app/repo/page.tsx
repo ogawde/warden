@@ -1,17 +1,22 @@
 import Link from "next/link";
 import { RunScanButton } from "@/components/run-scan-button";
 import { CreateTestIssueButton } from "@/components/create-test-issue-button";
+import { getSessionUser } from "@/lib/auth/get-session-user";
+import { resolveActiveRepository } from "@/lib/services/resolve-active-repository";
 import { APP_NAME } from "@warden/contracts";
 import { prisma } from "@/lib/db";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
 export default async function RepositoryDashboardPage() {
-  const repository = await prisma.repository.findFirst({
-    orderBy: { createdAt: "asc" }
-  });
+  const user = await getSessionUser();
+  const repository = await resolveActiveRepository();
 
   if (!repository) {
+    if (user) {
+      redirect("/repos");
+    }
     return (
       <main className="mx-auto min-h-screen max-w-4xl px-6 py-12">
         <h1 className="text-3xl font-semibold tracking-tight text-slate-900">

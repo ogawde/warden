@@ -7,15 +7,44 @@ import {
   oauthStatesMatch,
   readOAuthStateCookie
 } from "@/lib/auth/oauth-state";
-import { getWardenSession } from "@/lib/auth/session";
+import { openWardenSession } from "@/lib/auth/session";
 import { upsertOAuthUser } from "@/lib/auth/upsert-oauth-user";
+import { prisma } from "@/lib/db";
+import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
 function loginErrorRedirect(request: Request, code: string): NextResponse {
   return NextResponse.redirect(new URL(`/login?error=${code}`, request.url));
 }
 
+async function getPostLoginRedirectPath(userId: string): Promise<string> {
+  const activeRepository = await prisma.repository.findFirst({
+    where: {
+      userId,
+      selectedAt: {
+        not: null
+      }
+    },
+    orderBy: {
+      selectedAt: "desc"
+    }
+  });
+
+  return activeRepository ? "/" : "/repos";
+}
+
+async function redirectForAuthenticatedUser(
+  request: Request,
+  userId: string
+): Promise<NextResponse> {
+  const redirectPath = await getPostLoginRedirectPath(userId);
+  return NextResponse.redirect(new URL(redirectPath, request.url));
+}
+
 export async function GET(request: Request) {
+  const cookieStore = await cookies();
+  const session = await openWardenSession(cookieStore);
+
   const cookieState = await readOAuthStateCookie();
   await clearOAuthStateCookie();
 
@@ -36,6 +65,10 @@ export async function GET(request: Request) {
   }
 
   if (!cookieState || !oauthStatesMatch(state, cookieState)) {
+    if (session.userId) {
+      return redirectForAuthenticatedUser(request, session.userId);
+    }
+
     return loginErrorRedirect(request, "invalid_state");
   }
 
@@ -44,13 +77,21 @@ export async function GET(request: Request) {
     const profile = await fetchGitLabUser(tokens.accessToken);
     const user = await upsertOAuthUser(profile, tokens);
 
-    const session = await getWardenSession();
     session.userId = user.id;
     session.createdAt = new Date().toISOString();
     await session.save();
 
-    return NextResponse.redirect(new URL("/", request.url));
-  } catch {
+    return redirectForAuthenticatedUser(request, user.id);
+  } catch (error) {
+    if (session.userId) {
+      return redirectForAuthenticatedUser(request, session.userId);
+    }
+
+    console.error(
+      "GitLab OAuth callback failed:",
+      error instanceof Error ? error.message : "unknown error"
+    );
+
     return loginErrorRedirect(request, "oauth_failed");
   }
 }

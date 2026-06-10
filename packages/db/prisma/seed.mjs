@@ -17,17 +17,25 @@ async function main() {
     10
   );
 
-  await prisma.repository.upsert({
-    where: { gitlabProjectId },
-    update: {},
-    create: {
+  const demoRepository = await prisma.repository.findFirst({
+    where: {
       gitlabProjectId,
-      pathWithNamespace: "warden-demo/debt-lab",
-      name: "debt-lab",
-      defaultBranch: "main",
-      tokenHint: "xxxx"
+      userId: null
     }
   });
+
+  if (!demoRepository) {
+    await prisma.repository.create({
+      data: {
+        userId: null,
+        gitlabProjectId,
+        pathWithNamespace: "warden-demo/debt-lab",
+        name: "debt-lab",
+        defaultBranch: "main",
+        tokenHint: "xxxx"
+      }
+    });
+  }
 
   console.log("Seed complete", { userId: user.id });
 }
