@@ -1,5 +1,7 @@
 import { ExternalLinkIcon } from "lucide-react";
+import { MotionItem } from "@/components/motion/motion-item";
 import { ApproveProposalButton } from "@/components/approve-proposal-button";
+import { ProposalSummary } from "@/components/proposal-summary";
 import { EmptyState } from "@/components/empty-state";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -27,10 +29,10 @@ type ProposalsListProps = {
 };
 
 const statusStyles: Record<string, string> = {
-  PENDING_APPROVAL: "bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-200",
-  APPROVED: "bg-blue-100 text-blue-900 dark:bg-blue-950 dark:text-blue-200",
-  EXECUTED: "bg-emerald-100 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200",
-  REJECTED: "bg-red-100 text-red-900 dark:bg-red-950 dark:text-red-200"
+  PENDING_APPROVAL: "border-amber-300/60 bg-amber-100 text-amber-950",
+  APPROVED: "border-warden-sea/40 bg-warden-mint/30 text-warden-dark",
+  EXECUTED: "border-warden-sea/50 bg-warden-sea/15 text-warden-dark",
+  REJECTED: "border-red-300/60 bg-red-100 text-red-950"
 };
 
 export function ProposalsList({ proposals }: ProposalsListProps) {
@@ -46,17 +48,17 @@ export function ProposalsList({ proposals }: ProposalsListProps) {
 
   return (
     <ul className="grid gap-4">
-      {proposals.map((proposal) => {
+      {proposals.map((proposal, index) => {
         const canApprove = proposal.status === "PENDING_APPROVAL";
         const isExecuted = proposal.status === "EXECUTED";
 
         return (
-          <li key={proposal.id}>
+          <MotionItem key={proposal.id} index={index}>
             <Card>
               <CardHeader className="pb-3">
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge
-                    variant="secondary"
+                    variant="outline"
                     className={cn(
                       statusStyles[proposal.status] ??
                         "bg-secondary text-secondary-foreground"
@@ -70,9 +72,9 @@ export function ProposalsList({ proposals }: ProposalsListProps) {
                   </Badge>
                 </div>
                 <CardTitle className="text-base">{proposal.title}</CardTitle>
-                <CardDescription className="whitespace-pre-wrap">
-                  {proposal.summary}
-                </CardDescription>
+                <div className="text-muted-foreground">
+                  <ProposalSummary content={proposal.summary} />
+                </div>
               </CardHeader>
 
               {(canApprove || (isExecuted && proposal.issueUrl)) && (
@@ -94,7 +96,7 @@ export function ProposalsList({ proposals }: ProposalsListProps) {
                 </CardContent>
               )}
             </Card>
-          </li>
+          </MotionItem>
         );
       })}
     </ul>

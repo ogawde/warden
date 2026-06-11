@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { FindingsList } from "@/components/findings-list";
 import { ProposalsList } from "@/components/proposals-list";
+import { ScanProgressTracker } from "@/components/scan-progress-tracker";
 import { ScanStatusBadge } from "@/components/scan-status-badge";
 import { APP_NAME } from "@warden/contracts";
 import { getScanForUser } from "@/lib/services/get-scan-for-user";
@@ -67,11 +68,9 @@ export default async function ScanDetailPage({ params }: ScanPageProps) {
     issueUrl: proposal.issueCreation?.webUrl ?? null
   }));
 
-  const isInProgress =
-    scan.status === "QUEUED" || scan.status === "RUNNING";
-
   return (
     <main className="mx-auto max-w-5xl px-6 py-10">
+      <ScanProgressTracker scanId={scanId} initialStatus={scan.status} />
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
@@ -101,9 +100,6 @@ export default async function ScanDetailPage({ params }: ScanPageProps) {
           <CardTitle className="text-base">Scan overview</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2 text-sm text-muted-foreground">
-          {isInProgress ? (
-            <p>Scan is in progress. Refresh the page when complete.</p>
-          ) : null}
           {contextSnapshot?.repoPath ? (
             <p>
               Scanned path:{" "}

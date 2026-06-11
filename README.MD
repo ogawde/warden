@@ -1,139 +1,200 @@
 # Warden
 
-Autonomous engineering oversight for GitLab repositories — static analysis, GitLab context, agent reasoning, and human-approved issue creation.
+Warden is an AI-powered engineering assistant for GitLab repositories.
 
-**Production:** [warden-web-silk.vercel.app](https://warden-web-silk.vercel.app/)
+It analyzes repositories, identifies technical issues, prioritizes improvements, and helps teams turn recommendations into actionable GitLab issues.
 
-## Architecture
+## Live Demo
 
-| Component | Host | Role |
-|-----------|------|------|
-| Web (`apps/web`) | Vercel | OAuth login, repo selection, scan enqueue, issue approval |
-| Worker (`services/worker`) | Cloud Run | Checkout, static analysis, MCP context, agent reasoning |
-| Database | Neon Postgres | Users, repos, scans, findings, proposals |
+🌐 https://warden.curr.xyz
 
-## Prerequisites
+---
+
+## Problem
+
+Engineering teams accumulate technical debt every day:
+
+- Missing tests
+- Large or hard-to-maintain files
+- TODOs that never become tickets
+- CI/CD issues
+- Risky development patterns
+
+These issues are often known but rarely tracked consistently.
+
+Warden helps teams identify and prioritize them before they become larger problems.
+
+---
+
+## How It Works
+
+```text
+Connect GitLab
+      ↓
+Select Repository
+      ↓
+Run Scan
+      ↓
+Review Findings
+      ↓
+Review Recommendations
+      ↓
+Approve
+      ↓
+Create GitLab Issue
+```
+
+Warden combines repository analysis, GitLab project context, and AI-powered reasoning to generate actionable engineering recommendations.
+
+Every recommendation remains human-approved before any issue is created.
+
+---
+
+## Features
+
+### Repository Analysis
+
+Warden scans repositories and identifies:
+
+- Missing tests
+- Maintainability concerns
+- Technical debt
+- CI/CD issues
+- Risky changes
+
+### AI Recommendations
+
+Instead of generating dozens of suggestions, Warden focuses on the highest-impact improvements and explains why they matter.
+
+### Human-in-the-Loop
+
+Recommendations never execute automatically.
+
+Users review and approve actions before Warden creates GitLab issues.
+
+### GitLab Integration
+
+- GitLab OAuth authentication
+- Repository selection
+- Issue creation
+- Repository activity analysis
+
+---
+
+## Tech Stack
+
+### Frontend
+
+- Next.js
+- TypeScript
+- Tailwind CSS
+
+### Backend
+
+- Node.js
+- PostgreSQL
+- Prisma
+
+### Infrastructure
+
+- Vercel
+- Google Cloud Run
+- Neon Postgres
+
+### AI
+
+- Gemini on Google Cloud
+
+---
+
+## Local Development
+
+### Prerequisites
 
 - Node.js 22+
-- Neon Postgres database
-- GitLab OAuth application ([gitlab.com → User Settings → Applications](https://gitlab.com/-/user_settings/applications))
-- Google Cloud project (Vertex AI for agent reasoning)
-- `gcloud` CLI (worker deploy)
+- PostgreSQL / Neon Database
+- GitLab OAuth Application
+- Google Cloud Project
 
-## Local development
+### Setup
 
 ```bash
+git clone <repository-url>
+cd warden
+
 cp .env.example .env
-# Fill in DATABASE_URL, OAuth credentials, TOKEN_ENCRYPTION_KEY, etc.
 
 npm ci
+
 npm run db:generate
 npm run db:migrate
-npm run db:seed          # optional demo data
 
-npm run dev              # web on :3000
-npm run dev:worker       # worker on :8080
+npm run dev
+npm run dev:worker
 ```
 
-Generate secrets:
+Web:
 
-```bash
-openssl rand -base64 32   # SESSION_SECRET
-openssl rand -base64 32   # TOKEN_ENCRYPTION_KEY
-openssl rand -base64 32   # WORKER_SECRET
+```text
+http://localhost:3000
 ```
 
-## Production environment variables
+Worker:
 
-### Web (Vercel) — required
-
-| Variable | Notes |
-|----------|-------|
-| `DATABASE_URL` | Neon Postgres connection string |
-| `SESSION_SECRET` | iron-session cookie encryption (≥32 chars) |
-| `NEXT_PUBLIC_APP_URL` | Public app URL, e.g. `https://your-app.vercel.app` |
-| `GITLAB_OAUTH_CLIENT_ID` | GitLab OAuth application ID |
-| `GITLAB_OAUTH_CLIENT_SECRET` | GitLab OAuth application secret |
-| `GITLAB_OAUTH_SCOPES` | e.g. `read_user read_api api` |
-| `TOKEN_ENCRYPTION_KEY` | AES-256-GCM key for OAuth tokens at rest (base64, 32 bytes) |
-| `WORKER_URL` | Cloud Run service URL (no trailing slash) |
-| `WORKER_SECRET` | Bearer token for worker `/run-scan` |
-
-> **`TOKEN_ENCRYPTION_KEY` must match the worker value exactly.**  
-> **`WORKER_SECRET` must match the worker value exactly.**
-
-### Worker (Cloud Run) — required
-
-| Variable | Notes |
-|----------|-------|
-| `DATABASE_URL` | Same Neon database as Vercel |
-| `WORKER_SECRET` | Same value as Vercel `WORKER_SECRET` |
-| `TOKEN_ENCRYPTION_KEY` | Same value as Vercel `TOKEN_ENCRYPTION_KEY` |
-| `GITLAB_OAUTH_CLIENT_ID` | Same GitLab OAuth app as Vercel |
-| `GITLAB_OAUTH_CLIENT_SECRET` | Same GitLab OAuth app as Vercel |
-| `GITLAB_PAT` | GitLab personal access token (MCP REST fallback) |
-| `GITLAB_PROJECT_ID` | Numeric GitLab project ID |
-
-Also recommended on worker: `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION`, `VERTEX_GEMINI_MODEL`.
-
-See [cloud-run-deploy.md](./cloud-run-deploy.md) for full GCP deploy steps.
-
-## Production deployment sequence
-
-Run in order before serving traffic:
-
-### 1. Database migrations
-
-```bash
-export DATABASE_URL="postgresql://..."
-npm run db:migrate:deploy
+```text
+http://localhost:8080
 ```
 
-Applies committed Prisma migrations to Neon. Does not modify the schema — only runs existing migration files.
+---
 
-### 2. Deploy worker (Cloud Run)
+## Environment Variables
 
-```bash
-gcloud builds submit . \
-  --tag="${IMAGE}" \
-  --file="services/worker/Dockerfile"
+Copy `.env.example` and provide:
 
-gcloud run deploy warden-worker \
-  --image="${IMAGE}" \
-  --set-secrets="DATABASE_URL=...,WORKER_SECRET=...,TOKEN_ENCRYPTION_KEY=...,GITLAB_OAUTH_CLIENT_SECRET=...,GITLAB_PAT=..." \
-  --set-env-vars="GITLAB_OAUTH_CLIENT_ID=...,GITLAB_PROJECT_ID=..."
+```env
+DATABASE_URL=
+SESSION_SECRET=
+WORKER_SECRET=
+
+GITLAB_OAUTH_CLIENT_ID=
+GITLAB_OAUTH_CLIENT_SECRET=
+
+TOKEN_ENCRYPTION_KEY=
+
+GOOGLE_CLOUD_PROJECT=
+GOOGLE_CLOUD_LOCATION=
+
+WORKER_URL=
+NEXT_PUBLIC_APP_URL=
 ```
 
-Full commands, IAM, and Secret Manager setup: [cloud-run-deploy.md](./cloud-run-deploy.md).
+---
 
-### 3. Deploy web (Vercel)
+## Deployment
 
-Set all required Vercel env vars (see table above). Set `WORKER_URL` to the Cloud Run service URL after step 2.
+Warden is deployed using:
 
-### 4. Verify
+- Vercel (Web Application)
+- Google Cloud Run (Worker)
+- Neon (Database)
 
-1. Sign in with GitLab at `/login`
-2. Select a repository at `/repos`
-3. Run a scan from `/repo`
-4. Approve a proposal to create a GitLab issue
+Detailed deployment instructions:
 
-## Build
+- `cloud-run-deploy.md`
 
-```bash
-npm ci
-npm run build
-```
+---
 
-`package-lock.json` is committed — `npm ci` works from a clean clone. The worker Docker image runs `npm ci` from the lockfile only (no local artifacts required).
+## Roadmap
 
-## Scripts
+- Scheduled repository scans
+- Multi-repository support
+- Team workspaces
+- Repository health trends
+- Notifications and integrations
+- Advanced recommendation policies
 
-| Script | Purpose |
-|--------|---------|
-| `npm run dev` | Start Next.js dev server |
-| `npm run dev:worker` | Start scan worker locally |
-| `npm run build` | Production build (web) |
-| `npm run db:generate` | Generate Prisma client |
-| `npm run db:migrate` | Apply migrations (dev) |
-| `npm run db:migrate:deploy` | Apply migrations (production) |
-| `npm run db:seed` | Seed demo data |
+---
+
+## License
+
+MIT

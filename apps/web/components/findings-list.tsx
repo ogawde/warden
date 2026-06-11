@@ -1,4 +1,5 @@
 import { SearchXIcon } from "lucide-react";
+import { MotionItem } from "@/components/motion/motion-item";
 import { EmptyState } from "@/components/empty-state";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -26,11 +27,11 @@ type FindingsListProps = {
 };
 
 const severityStyles: Record<string, string> = {
-  CRITICAL: "bg-red-100 text-red-900 dark:bg-red-950 dark:text-red-200",
-  HIGH: "bg-orange-100 text-orange-900 dark:bg-orange-950 dark:text-orange-200",
-  MEDIUM: "bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-200",
-  LOW: "bg-secondary text-secondary-foreground",
-  INFO: "bg-muted text-muted-foreground"
+  CRITICAL: "border-red-300/60 bg-red-100 text-red-950",
+  HIGH: "border-orange-300/60 bg-orange-100 text-orange-950",
+  MEDIUM: "border-amber-300/60 bg-amber-100 text-amber-950",
+  LOW: "border-border bg-secondary text-secondary-foreground",
+  INFO: "border-border bg-muted text-muted-foreground"
 };
 
 export function FindingsList({ findings }: FindingsListProps) {
@@ -46,16 +47,16 @@ export function FindingsList({ findings }: FindingsListProps) {
 
   return (
     <ul className="grid gap-4">
-      {findings.map((finding) => {
+      {findings.map((finding, index) => {
         const evidence = finding.evidence[0];
 
         return (
-          <li key={finding.id}>
+          <MotionItem key={finding.id} index={index}>
             <Card>
               <CardHeader className="pb-3">
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge
-                    variant="secondary"
+                    variant="outline"
                     className={cn(
                       severityStyles[finding.severity] ?? severityStyles.LOW
                     )}
@@ -79,7 +80,7 @@ export function FindingsList({ findings }: FindingsListProps) {
                 </CardContent>
               )}
             </Card>
-          </li>
+          </MotionItem>
         );
       })}
     </ul>

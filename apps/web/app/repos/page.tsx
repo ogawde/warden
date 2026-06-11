@@ -3,6 +3,7 @@ import { requireSession } from "@/lib/auth/get-session-user";
 import { listAccessibleGitLabProjects } from "@/lib/gitlab/list-projects";
 import { redirect } from "next/navigation";
 import { FolderGit2Icon, GitBranchIcon, KeyRoundIcon } from "lucide-react";
+import { MotionItem } from "@/components/motion/motion-item";
 import { EmptyState } from "@/components/empty-state";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -67,9 +68,9 @@ export default async function ReposPage() {
       />
 
       <ul className="mt-8 grid gap-4">
-        {projects.map((project) => (
-          <li key={project.id}>
-            <Card className="transition-colors hover:bg-muted/30">
+        {projects.map((project, index) => (
+          <MotionItem key={project.id} index={index}>
+            <Card className="transition-colors hover:border-primary/30 hover:bg-warden-mint/10">
               <CardHeader className="pb-3">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="space-y-1">
@@ -85,13 +86,13 @@ export default async function ReposPage() {
               <CardContent>
                 <form method="POST" action="/api/repos/select">
                   <input type="hidden" name="gitlabProjectId" value={project.id} />
-                  <Button type="submit" size="sm">
+                  <Button type="submit" size="sm" className="shadow-button">
                     Select repository
                   </Button>
                 </form>
               </CardContent>
             </Card>
-          </li>
+          </MotionItem>
         ))}
       </ul>
     </main>

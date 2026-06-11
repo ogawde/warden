@@ -47,7 +47,11 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             </Alert>
           ) : null}
 
-          <Button className="w-full" size="lg" render={<Link href="/api/auth/gitlab/start" />}>
+          <Button
+            className="w-full shadow-button"
+            size="lg"
+            render={<Link href="/api/auth/gitlab/start" />}
+          >
             Sign in with GitLab
           </Button>
         </CardContent>

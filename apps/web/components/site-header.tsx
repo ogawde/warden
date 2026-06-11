@@ -1,10 +1,9 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ShieldCheckIcon } from "lucide-react";
+import { BrandLogo } from "@/components/brand-logo";
 import { getSessionUser } from "@/lib/auth/get-session-user";
 import { getWardenSession } from "@/lib/auth/session";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 
 async function logoutAction() {
   "use server";
@@ -20,26 +19,20 @@ export async function SiteHeader() {
     user?.gitlabUsername ?? user?.name ?? user?.email ?? null;
 
   return (
-    <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+    <header className="sticky top-0 z-40 border-b border-border/70 bg-background/90 shadow-[0_1px_0_rgb(66_132_117/0.08)] backdrop-blur-md supports-[backdrop-filter]:bg-background/85">
       <div className="mx-auto flex h-14 max-w-5xl items-center justify-between gap-4 px-6">
-        <div className="flex min-w-0 items-center gap-5">
-          <Link
-            href="/"
-            className="flex items-center gap-2 font-semibold tracking-tight transition-opacity hover:opacity-80"
-          >
-            <ShieldCheckIcon className="size-4 shrink-0 text-primary" />
-            Warden
+        <div className="flex min-w-0 items-center gap-6">
+          <Link href="/" className="flex shrink-0 items-center hover:opacity-80">
+            <BrandLogo size="sm" />
           </Link>
 
           {user ? (
-            <nav className="hidden items-center gap-1 sm:flex">
-              <Button variant="ghost" size="sm" render={<Link href="/repo" />}>
-                Dashboard
-              </Button>
-              <Button variant="ghost" size="sm" render={<Link href="/repos" />}>
-                Repositories
-              </Button>
-            </nav>
+            <Link
+              href="/repos"
+              className="hidden text-sm font-medium text-muted-foreground transition-colors hover:text-foreground sm:inline-flex sm:items-center sm:leading-none"
+            >
+              Repositories
+            </Link>
           ) : null}
         </div>
 
@@ -47,14 +40,11 @@ export async function SiteHeader() {
           {user ? (
             <>
               {displayName ? (
-                <>
-                  <span className="hidden max-w-[12rem] truncate text-sm text-muted-foreground sm:inline">
-                    {displayName}
-                  </span>
-                  <Separator orientation="vertical" className="hidden h-4 sm:block" />
-                </>
+                <span className="hidden max-w-[12rem] truncate text-sm leading-none text-muted-foreground sm:inline">
+                  {displayName}
+                </span>
               ) : null}
-              <form action={logoutAction}>
+              <form action={logoutAction} className="flex items-center">
                 <Button type="submit" variant="outline" size="sm">
                   Log out
                 </Button>

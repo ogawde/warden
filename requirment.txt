@@ -1,2 +1,0 @@
-https://rapid-agent.devpost.com/
-https://console.cloud.google.com/agent-platform/overview?pli=1&project=prompt-lens-478904

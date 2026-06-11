@@ -9,7 +9,6 @@ import {
 } from "@/lib/auth/oauth-state";
 import { openWardenSession } from "@/lib/auth/session";
 import { upsertOAuthUser } from "@/lib/auth/upsert-oauth-user";
-import { prisma } from "@/lib/db";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
@@ -17,28 +16,8 @@ function loginErrorRedirect(request: Request, code: string): NextResponse {
   return NextResponse.redirect(new URL(`/login?error=${code}`, request.url));
 }
 
-async function getPostLoginRedirectPath(userId: string): Promise<string> {
-  const activeRepository = await prisma.repository.findFirst({
-    where: {
-      userId,
-      selectedAt: {
-        not: null
-      }
-    },
-    orderBy: {
-      selectedAt: "desc"
-    }
-  });
-
-  return activeRepository ? "/" : "/repos";
-}
-
-async function redirectForAuthenticatedUser(
-  request: Request,
-  userId: string
-): Promise<NextResponse> {
-  const redirectPath = await getPostLoginRedirectPath(userId);
-  return NextResponse.redirect(new URL(redirectPath, request.url));
+function redirectToLanding(request: Request): NextResponse {
+  return NextResponse.redirect(new URL("/", request.url));
 }
 
 export async function GET(request: Request) {
@@ -66,7 +45,7 @@ export async function GET(request: Request) {
 
   if (!cookieState || !oauthStatesMatch(state, cookieState)) {
     if (session.userId) {
-      return redirectForAuthenticatedUser(request, session.userId);
+      return redirectToLanding(request);
     }
 
     return loginErrorRedirect(request, "invalid_state");
@@ -81,10 +60,10 @@ export async function GET(request: Request) {
     session.createdAt = new Date().toISOString();
     await session.save();
 
-    return redirectForAuthenticatedUser(request, user.id);
+    return redirectToLanding(request);
   } catch (error) {
     if (session.userId) {
-      return redirectForAuthenticatedUser(request, session.userId);
+      return redirectToLanding(request);
     }
 
     console.error(

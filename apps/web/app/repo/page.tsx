@@ -1,13 +1,9 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { ExternalLinkIcon, FlaskConicalIcon, ScanSearchIcon } from "lucide-react";
 import { RunScanButton } from "@/components/run-scan-button";
-import { CreateTestIssueButton } from "@/components/create-test-issue-button";
-import { ScanStatusBadge } from "@/components/scan-status-badge";
 import { getSessionUser } from "@/lib/auth/get-session-user";
 import { resolveActiveRepository } from "@/lib/services/resolve-active-repository";
 import { APP_NAME } from "@warden/contracts";
-import { prisma } from "@/lib/db";
 import { redirect } from "next/navigation";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -19,7 +15,6 @@ import {
   CardHeader,
   CardTitle
 } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 
 export const dynamic = "force-dynamic";
 
@@ -47,11 +42,6 @@ export default async function RepositoryDashboardPage() {
       </main>
     );
   }
-
-  const latestScan = await prisma.scan.findFirst({
-    where: { repositoryId: repository.id },
-    orderBy: { createdAt: "desc" }
-  });
 
   return (
     <main className="mx-auto max-w-5xl px-6 py-10">
@@ -93,70 +83,9 @@ export default async function RepositoryDashboardPage() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <div className="flex items-start gap-3">
-              <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted">
-                <ScanSearchIcon className="size-4 text-muted-foreground" />
-              </div>
-              <div>
-                <CardTitle>Scan</CardTitle>
-                <CardDescription>
-                  Queues a scan on the worker (run{" "}
-                  <code className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs">
-                    npm run dev:worker
-                  </code>
-                  ). Analyzes your local clone via{" "}
-                  <code className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs">
-                    REPO_LOCAL_PATH
-                  </code>
-                  .
-                </CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <RunScanButton />
-
-            {latestScan ? (
-              <>
-                <Separator />
-                <div className="flex flex-wrap items-center gap-3 text-sm">
-                  <span className="text-muted-foreground">Latest scan</span>
-                  <ScanStatusBadge status={latestScan.status} />
-                  <Button
-                    variant="link"
-                    size="sm"
-                    className="h-auto px-0"
-                    render={<Link href={`/scans/${latestScan.id}`} />}
-                  >
-                    {latestScan.createdAt.toLocaleString()}
-                    <ExternalLinkIcon data-icon="inline-end" className="size-3" />
-                  </Button>
-                </div>
-              </>
-            ) : null}
-          </CardContent>
-        </Card>
-
-        <Card className="border-dashed bg-muted/20">
-          <CardHeader>
-            <div className="flex items-start gap-3">
-              <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted">
-                <FlaskConicalIcon className="size-4 text-muted-foreground" />
-              </div>
-              <div>
-                <CardTitle>M1 dev shortcut</CardTitle>
-                <CardDescription>
-                  Create a test GitLab issue to verify the integration pipeline.
-                </CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <CreateTestIssueButton />
-          </CardContent>
-        </Card>
+        <div className="mt-2">
+          <RunScanButton />
+        </div>
       </div>
     </main>
   );

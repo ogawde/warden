@@ -15,10 +15,10 @@ type EmptyStateProps = {
 
 export function EmptyState({ icon: Icon, title, description }: EmptyStateProps) {
   return (
-    <Card className="border-dashed">
+    <Card className="border-dashed border-border/80 bg-card/80">
       <CardHeader className="items-center text-center">
-        <div className="mb-1 flex size-10 items-center justify-center rounded-full bg-muted">
-          <Icon className="size-5 text-muted-foreground" />
+        <div className="mb-1 flex size-10 items-center justify-center rounded-full bg-warden-mint/25">
+          <Icon className="size-5 text-warden-sea" />
         </div>
         <CardTitle>{title}</CardTitle>
         <CardDescription>{description}</CardDescription>

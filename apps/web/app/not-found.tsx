@@ -14,8 +14,8 @@ export default function NotFound() {
     <main className="mx-auto flex min-h-[calc(100vh-3.5rem)] max-w-lg items-center px-6 py-16">
       <Card className="w-full">
         <CardHeader className="items-center text-center">
-          <div className="mb-1 flex size-10 items-center justify-center rounded-full bg-muted">
-            <FileQuestionIcon className="size-5 text-muted-foreground" />
+          <div className="mb-1 flex size-10 items-center justify-center rounded-full bg-warden-mint/25">
+            <FileQuestionIcon className="size-5 text-warden-sea" />
           </div>
           <CardTitle>Page not found</CardTitle>
           <CardDescription>
@@ -23,7 +23,9 @@ export default function NotFound() {
           </CardDescription>
         </CardHeader>
         <CardContent className="flex justify-center">
-          <Button render={<Link href="/" />}>Back to home</Button>
+          <Button className="shadow-button" render={<Link href="/" />}>
+            Back to home
+          </Button>
         </CardContent>
       </Card>
     </main>
