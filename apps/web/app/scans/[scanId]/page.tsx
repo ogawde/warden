@@ -2,9 +2,20 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { FindingsList } from "@/components/findings-list";
 import { ProposalsList } from "@/components/proposals-list";
+import { ScanStatusBadge } from "@/components/scan-status-badge";
 import { APP_NAME } from "@warden/contracts";
 import { getScanForUser } from "@/lib/services/get-scan-for-user";
 import { ResourceNotFoundError } from "@/lib/services/resource-not-found-error";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator
+} from "@/components/ui/breadcrumb";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 
 export const dynamic = "force-dynamic";
 
@@ -56,41 +67,73 @@ export default async function ScanDetailPage({ params }: ScanPageProps) {
     issueUrl: proposal.issueCreation?.webUrl ?? null
   }));
 
+  const isInProgress =
+    scan.status === "QUEUED" || scan.status === "RUNNING";
+
   return (
-    <main className="mx-auto min-h-screen max-w-4xl px-6 py-12">
-      <Link href="/repo" className="text-sm text-slate-500 hover:text-slate-800">
-        ← Back to repository
-      </Link>
+    <main className="mx-auto max-w-5xl px-6 py-10">
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink render={<Link href="/repo" />}>
+              Repository
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>Scan</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
 
-      <h1 className="mt-4 text-3xl font-semibold tracking-tight text-slate-900">
-        {APP_NAME} Scan
-      </h1>
-      <p className="mt-2 text-sm text-slate-600">
-        {scan.repository.pathWithNamespace} · {scan.status}
-        {scan.status === "QUEUED" || scan.status === "RUNNING" ? (
-          <> · refresh when complete</>
-        ) : null}
-        {contextSnapshot?.repoPath ? (
-          <> · scanned {contextSnapshot.repoPath}</>
-        ) : null}
-      </p>
-
-      <section className="mt-8">
-        <h2 className="text-lg font-medium text-slate-900">
-          Findings ({findings.length})
-        </h2>
-        <div className="mt-4">
-          <FindingsList findings={findings} />
+      <div className="mt-6 flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-semibold tracking-tight">{APP_NAME} Scan</h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            {scan.repository.pathWithNamespace}
+          </p>
         </div>
+        <ScanStatusBadge status={scan.status} />
+      </div>
+
+      <Card className="mt-6">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Scan overview</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2 text-sm text-muted-foreground">
+          {isInProgress ? (
+            <p>Scan is in progress. Refresh the page when complete.</p>
+          ) : null}
+          {contextSnapshot?.repoPath ? (
+            <p>
+              Scanned path:{" "}
+              <code className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs text-foreground">
+                {contextSnapshot.repoPath}
+              </code>
+            </p>
+          ) : null}
+          <p>
+            {findings.length} findings · {proposals.length} proposed actions
+          </p>
+        </CardContent>
+      </Card>
+
+      <section className="mt-10">
+        <div className="flex items-center justify-between gap-4">
+          <h2 className="text-lg font-medium">Findings</h2>
+          <span className="text-sm text-muted-foreground">{findings.length}</span>
+        </div>
+        <Separator className="my-4" />
+        <FindingsList findings={findings} />
       </section>
 
       <section className="mt-10">
-        <h2 className="text-lg font-medium text-slate-900">
-          Proposed Actions ({proposals.length})
-        </h2>
-        <div className="mt-4">
-          <ProposalsList proposals={proposals} />
+        <div className="flex items-center justify-between gap-4">
+          <h2 className="text-lg font-medium">Proposed Actions</h2>
+          <span className="text-sm text-muted-foreground">{proposals.length}</span>
         </div>
+        <Separator className="my-4" />
+        <ProposalsList proposals={proposals} />
       </section>
     </main>
   );

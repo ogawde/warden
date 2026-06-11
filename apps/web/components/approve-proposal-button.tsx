@@ -2,6 +2,13 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import {
+  CheckCircle2Icon,
+  ExternalLinkIcon,
+  Loader2Icon
+} from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 
 type ApiResponse =
   | { ok: true; webUrl?: string }
@@ -72,29 +79,46 @@ export function ApproveProposalButton({
   }
 
   return (
-    <div className="space-y-2">
-      <button
+    <div className="space-y-3">
+      <Button
         type="button"
+        size="sm"
         onClick={handleClick}
         disabled={disabled || isLoading}
-        className="inline-flex rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
       >
-        {isLoading ? "Creating issue…" : "Approve & Create Issue"}
-      </button>
+        {isLoading ? (
+          <>
+            <Loader2Icon className="animate-spin" />
+            Creating issue…
+          </>
+        ) : (
+          "Approve & Create Issue"
+        )}
+      </Button>
+
       {issueUrl ? (
-        <p className="text-sm text-green-700">
-          Issue created.{" "}
-          <a
-            href={issueUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="font-medium underline"
-          >
-            Open in GitLab
-          </a>
-        </p>
+        <Alert>
+          <CheckCircle2Icon />
+          <AlertDescription>
+            Issue created.{" "}
+            <a
+              href={issueUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 font-medium underline underline-offset-4"
+            >
+              Open in GitLab
+              <ExternalLinkIcon className="size-3" />
+            </a>
+          </AlertDescription>
+        </Alert>
       ) : null}
-      {error ? <p className="text-sm text-red-600">{error}</p> : null}
+
+      {error ? (
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      ) : null}
     </div>
   );
 }

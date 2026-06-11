@@ -2,6 +2,9 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { Loader2Icon } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 
 type RunScanResponse =
   | { ok: true; scanId: string }
@@ -35,16 +38,22 @@ export function RunScanButton() {
   }
 
   return (
-    <div className="space-y-2">
-      <button
-        type="button"
-        onClick={handleClick}
-        disabled={isLoading}
-        className="inline-flex rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
-      >
-        {isLoading ? "Starting scan…" : "Run Scan"}
-      </button>
-      {error ? <p className="text-sm text-red-600">{error}</p> : null}
+    <div className="space-y-3">
+      <Button type="button" onClick={handleClick} disabled={isLoading}>
+        {isLoading ? (
+          <>
+            <Loader2Icon className="animate-spin" />
+            Starting scan…
+          </>
+        ) : (
+          "Run Scan"
+        )}
+      </Button>
+      {error ? (
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      ) : null}
     </div>
   );
 }

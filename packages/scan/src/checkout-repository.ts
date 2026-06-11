@@ -45,7 +45,11 @@ function buildGitHttpExtraHeader(auth: GitLabAuth): string {
     return `PRIVATE-TOKEN: ${auth.token}`;
   }
 
-  return `Authorization: Bearer ${auth.accessToken}`;
+  // GitLab Git HTTP does not accept Bearer tokens for clone/fetch.
+  // OAuth access tokens must use HTTP Basic with username "oauth2".
+  // @see https://docs.gitlab.com/ee/api/oauth2/#resource-owner-password-credentials-flow
+  const credentials = Buffer.from(`oauth2:${auth.accessToken}`).toString("base64");
+  return `Authorization: Basic ${credentials}`;
 }
 
 function formatGitError(command: string, error: unknown): string {
@@ -142,6 +146,15 @@ async function checkoutOAuthRepository(
     const message = formatGitError("git clone", error);
     if (message.includes("Remote branch") && message.includes("not found")) {
       throw new Error(`Repository branch "${branch}" was not found: ${message}`);
+    }
+
+    if (
+      message.includes("Authentication failed") ||
+      message.includes("Access denied")
+    ) {
+      throw new Error(
+        `GitLab repository checkout failed: authentication denied. Sign out and sign in again, or ensure your GitLab OAuth app includes the api scope.`
+      );
     }
 
     throw new Error(message);

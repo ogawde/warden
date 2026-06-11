@@ -1,6 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { CheckCircle2Icon, ExternalLinkIcon, Loader2Icon } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 
 type CreateIssueResponse =
   | { ok: true; webUrl: string; gitlabIssueIid: number }
@@ -39,30 +42,40 @@ export function CreateTestIssueButton() {
 
   return (
     <div className="space-y-3">
-      <button
-        type="button"
-        onClick={handleClick}
-        disabled={isLoading}
-        className="inline-flex rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
-      >
-        {isLoading ? "Creating issue…" : "Create Test Issue"}
-      </button>
+      <Button type="button" onClick={handleClick} disabled={isLoading}>
+        {isLoading ? (
+          <>
+            <Loader2Icon className="animate-spin" />
+            Creating issue…
+          </>
+        ) : (
+          "Create Test Issue"
+        )}
+      </Button>
 
       {issueUrl ? (
-        <p className="text-sm text-green-700">
-          Issue created successfully.{" "}
-          <a
-            href={issueUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="font-medium underline"
-          >
-            Open in GitLab
-          </a>
-        </p>
+        <Alert>
+          <CheckCircle2Icon />
+          <AlertDescription>
+            Issue created successfully.{" "}
+            <a
+              href={issueUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 font-medium underline underline-offset-4"
+            >
+              Open in GitLab
+              <ExternalLinkIcon className="size-3" />
+            </a>
+          </AlertDescription>
+        </Alert>
       ) : null}
 
-      {error ? <p className="text-sm text-red-600">{error}</p> : null}
+      {error ? (
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      ) : null}
     </div>
   );
 }

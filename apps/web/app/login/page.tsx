@@ -1,4 +1,14 @@
 import Link from "next/link";
+import { AlertCircleIcon, ArrowLeftIcon } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle
+} from "@/components/ui/card";
 
 type LoginPageProps = {
   searchParams: Promise<{ error?: string }>;
@@ -8,25 +18,40 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   const { error } = await searchParams;
 
   return (
-    <main className="mx-auto max-w-md px-6 py-12">
-      <h1 className="text-2xl font-semibold">Sign in</h1>
+    <main className="mx-auto flex min-h-[calc(100vh-3.5rem)] max-w-md items-center px-6 py-12">
+      <Card className="w-full">
+        <CardHeader>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="-ml-2 w-fit"
+            render={<Link href="/" />}
+          >
+            <ArrowLeftIcon data-icon="inline-start" />
+            Back
+          </Button>
+          <CardTitle className="text-2xl">Sign in</CardTitle>
+          <CardDescription>
+            Connect your GitLab account to access repositories and scans.
+          </CardDescription>
+        </CardHeader>
 
-      {error ? (
-        <p className="mt-4 text-sm text-red-700">
-          Sign-in failed ({error}). Please try again.
-        </p>
-      ) : (
-        <p className="mt-4 text-sm text-slate-600">
-          Sign in with GitLab to continue.
-        </p>
-      )}
+        <CardContent className="space-y-6">
+          {error ? (
+            <Alert variant="destructive">
+              <AlertCircleIcon />
+              <AlertTitle>Sign-in failed</AlertTitle>
+              <AlertDescription>
+                Authentication failed ({error}). Please try again.
+              </AlertDescription>
+            </Alert>
+          ) : null}
 
-      <Link
-        href="/api/auth/gitlab/start"
-        className="mt-6 inline-block rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white"
-      >
-        Sign in with GitLab
-      </Link>
+          <Button className="w-full" size="lg" render={<Link href="/api/auth/gitlab/start" />}>
+            Sign in with GitLab
+          </Button>
+        </CardContent>
+      </Card>
     </main>
   );
 }
