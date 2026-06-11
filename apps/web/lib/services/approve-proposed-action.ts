@@ -1,16 +1,21 @@
+import { requireSession } from "@/lib/auth/get-session-user";
 import { prisma } from "@/lib/db";
-import { getDemoUser } from "@/lib/services/get-demo-user";
+import { assertRepositoryOwnedByUser } from "./assert-repository-ownership";
+import { ResourceNotFoundError } from "./resource-not-found-error";
 
 export async function approveProposedAction(proposedActionId: string) {
-  const user = await getDemoUser();
+  const user = await requireSession();
 
   const proposedAction = await prisma.proposedAction.findUnique({
-    where: { id: proposedActionId }
+    where: { id: proposedActionId },
+    include: { repository: true }
   });
 
   if (!proposedAction) {
-    throw new Error("Proposed action not found");
+    throw new ResourceNotFoundError("Proposed action not found");
   }
+
+  assertRepositoryOwnedByUser(proposedAction.repository, user);
 
   if (proposedAction.status !== "PENDING_APPROVAL") {
     throw new Error("Only pending proposals can be approved");

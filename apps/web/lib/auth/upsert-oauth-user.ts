@@ -1,8 +1,8 @@
-import type {
-  GitLabOAuthTokens,
-  GitLabUserProfile
-} from "@/lib/auth/gitlab-oauth";
-import { encryptToken } from "@/lib/auth/token-crypto";
+import type { GitLabUserProfile } from "@/lib/auth/gitlab-oauth";
+import {
+  buildEncryptedTokenFields,
+  type GitLabOAuthTokens
+} from "@warden/auth";
 import type { User } from "@warden/db";
 import { prisma } from "@/lib/db";
 
@@ -22,20 +22,6 @@ function pickRealEmail(profile: GitLabUserProfile): string | null {
 
 function resolveUserEmail(profile: GitLabUserProfile): string {
   return pickRealEmail(profile) ?? `${profile.id}@users.gitlab.warden`;
-}
-
-function computeTokenExpiresAt(tokens: GitLabOAuthTokens): Date {
-  return new Date((tokens.createdAt + tokens.expiresIn) * 1000);
-}
-
-function buildEncryptedTokenFields(tokens: GitLabOAuthTokens) {
-  return {
-    accessTokenEnc: encryptToken(tokens.accessToken),
-    refreshTokenEnc: tokens.refreshToken
-      ? encryptToken(tokens.refreshToken)
-      : null,
-    tokenExpiresAt: computeTokenExpiresAt(tokens)
-  };
 }
 
 export async function upsertOAuthUser(

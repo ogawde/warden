@@ -98,7 +98,7 @@ model User {
   lastLoginAt      DateTime?
   createdAt        DateTime        @default(now())
   repositories     Repository[]
-  scans            Scan[]
+  scansTriggered   Scan[]          @relation("ScanTriggeredBy")
   approvals        Approval[]
   activity         ActivityEvent[]
 }
@@ -152,12 +152,13 @@ model Scan {
   updatedAt       DateTime     @updatedAt
 
   repository      Repository   @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
-  triggeredBy     User?        @relation(fields: [triggeredById], references: [id])
+  triggeredBy     User?        @relation("ScanTriggeredBy", fields: [triggeredById], references: [id], onDelete: SetNull)
   findings        Finding[]
   proposedActions ProposedAction[]
   activity        ActivityEvent[]
 
   @@index([repositoryId, createdAt(sort: Desc)])
+  @@index([triggeredById])
   @@index([status])
 }
 

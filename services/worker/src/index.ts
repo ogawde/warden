@@ -1,7 +1,6 @@
 import http from "node:http";
 import { executeScanJob } from "@warden/scan";
 import { isAuthorized } from "./auth";
-import { handleDebugDb } from "./debug-db";
 import { loadWorkerEnv } from "./load-env";
 
 loadWorkerEnv();
@@ -68,15 +67,12 @@ async function handleRunScan(
 
   const { scanId, repositoryId } = body;
 
-  // TODO REMOVE AFTER DEBUGGING — await scan so response includes result
-  try {
-    const result = await executeScanJob({ scanId, repositoryId });
-    sendJson(response, 200, { ok: true, result });
-  } catch (error) {
+  sendJson(response, 202, { ok: true, scanId, accepted: true });
+
+  void executeScanJob({ scanId, repositoryId }).catch((error) => {
     const message = error instanceof Error ? error.message : "Scan job failed";
     console.error(`[worker] scan ${scanId} failed:`, message);
-    sendJson(response, 500, { ok: false, error: message });
-  }
+  });
 }
 
 const server = http.createServer(async (request, response) => {
@@ -84,12 +80,6 @@ const server = http.createServer(async (request, response) => {
 
   if (request.method === "GET" && url.pathname === "/health") {
     sendJson(response, 200, { ok: true, service: "warden-worker" });
-    return;
-  }
-
-  // TODO REMOVE AFTER DEBUGGING
-  if (request.method === "GET" && url.pathname === "/debug-db") {
-    await handleDebugDb(response);
     return;
   }
 

@@ -1,7 +1,11 @@
 import { loadRootEnv } from "@/lib/load-root-env";
+import {
+  getDefaultGitLabPatAuth,
+  type GitLabAuth
+} from "@warden/gitlab-mcp";
 
 export type GitLabConfig = {
-  pat: string;
+  auth: GitLabAuth;
   projectId: number;
   baseUrl: string;
 };
@@ -15,16 +19,18 @@ function readEnv(name: string): string | undefined {
   return value.trim().replace(/^["']|["']$/g, "");
 }
 
+export function getGitLabBaseUrl(): string {
+  loadRootEnv();
+
+  const baseUrl = readEnv("GITLAB_BASE_URL") ?? "https://gitlab.com";
+  return baseUrl.replace(/\/$/, "");
+}
+
 export function getGitLabConfig(): GitLabConfig {
   loadRootEnv();
 
-  const pat = readEnv("GITLAB_PAT");
   const projectIdRaw = readEnv("GITLAB_PROJECT_ID");
-  const baseUrl = readEnv("GITLAB_BASE_URL") ?? "https://gitlab.com";
-
-  if (!pat) {
-    throw new Error("GITLAB_PAT is not set");
-  }
+  const baseUrl = getGitLabBaseUrl();
 
   if (!projectIdRaw) {
     throw new Error("GITLAB_PROJECT_ID is not set");
@@ -37,8 +43,8 @@ export function getGitLabConfig(): GitLabConfig {
   }
 
   return {
-    pat,
+    auth: getDefaultGitLabPatAuth(),
     projectId,
-    baseUrl: baseUrl.replace(/\/$/, "")
+    baseUrl
   };
 }

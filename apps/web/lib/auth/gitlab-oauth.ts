@@ -1,15 +1,15 @@
 import { loadRootEnv } from "@/lib/load-root-env";
+import {
+  parseGitLabTokenResponse,
+  refreshGitLabOAuthTokens,
+  type GitLabOAuthTokens,
+  type GitLabTokenApiResponse
+} from "@warden/auth";
 
 const GITLAB_COM_ORIGIN = "https://gitlab.com";
 const OAUTH_CALLBACK_PATH = "/api/auth/gitlab/callback";
 
-export type GitLabOAuthTokens = {
-  accessToken: string;
-  refreshToken: string | null;
-  tokenType: string;
-  expiresIn: number;
-  createdAt: number;
-};
+export type { GitLabOAuthTokens };
 
 export type GitLabUserProfile = {
   id: number;
@@ -18,16 +18,6 @@ export type GitLabUserProfile = {
   publicEmail: string | null;
   name: string | null;
   avatarUrl: string | null;
-};
-
-type GitLabTokenResponse = {
-  access_token: string;
-  refresh_token?: string;
-  token_type: string;
-  expires_in: number;
-  created_at: number;
-  error?: string;
-  error_description?: string;
 };
 
 type GitLabUserApiResponse = {
@@ -141,7 +131,7 @@ export async function exchangeCodeForTokens(
     body: body.toString()
   });
 
-  const payload = (await response.json()) as GitLabTokenResponse;
+  const payload = (await response.json()) as GitLabTokenApiResponse;
 
   if (!response.ok || payload.error) {
     const detail =
@@ -151,17 +141,19 @@ export async function exchangeCodeForTokens(
     );
   }
 
-  if (!payload.access_token) {
-    throw new Error("GitLab OAuth token exchange returned no access_token");
-  }
+  return parseGitLabTokenResponse(payload);
+}
 
-  return {
-    accessToken: payload.access_token,
-    refreshToken: payload.refresh_token ?? null,
-    tokenType: payload.token_type,
-    expiresIn: payload.expires_in,
-    createdAt: payload.created_at
-  };
+/**
+ * Refresh OAuth access tokens using a refresh token.
+ * @see https://docs.gitlab.com/api/oauth2/
+ */
+export async function refreshAccessToken(
+  refreshToken: string
+): Promise<GitLabOAuthTokens> {
+  return refreshGitLabOAuthTokens(refreshToken, {
+    previousRefreshToken: refreshToken
+  });
 }
 
 /**

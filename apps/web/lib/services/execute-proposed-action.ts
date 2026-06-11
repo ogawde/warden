@@ -1,7 +1,11 @@
+import { requireSession } from "@/lib/auth/get-session-user";
 import { createIssue } from "@/lib/gitlab/create-issue";
-import { getGitLabConfig } from "@/lib/gitlab/config";
+import { getGitLabBaseUrl } from "@/lib/gitlab/config";
+import { resolveActingUserGitLabAuth } from "@/lib/gitlab/resolve-acting-user-gitlab-auth";
 import { prisma } from "@/lib/db";
 import { randomUUID } from "crypto";
+import { assertRepositoryOwnedByUser } from "./assert-repository-ownership";
+import { ResourceNotFoundError } from "./resource-not-found-error";
 
 export type ExecuteProposedActionResult = {
   issueCreationId: string;
@@ -12,16 +16,18 @@ export type ExecuteProposedActionResult = {
 export async function executeProposedAction(
   proposedActionId: string
 ): Promise<ExecuteProposedActionResult> {
-  const config = getGitLabConfig();
+  const user = await requireSession();
 
   const proposedAction = await prisma.proposedAction.findUnique({
     where: { id: proposedActionId },
-    include: { approvals: true, issueCreation: true }
+    include: { approvals: true, issueCreation: true, repository: true }
   });
 
   if (!proposedAction) {
-    throw new Error("Proposed action not found");
+    throw new ResourceNotFoundError("Proposed action not found");
   }
+
+  assertRepositoryOwnedByUser(proposedAction.repository, user);
 
   if (proposedAction.status !== "APPROVED") {
     throw new Error("Proposed action must be approved before execution");
@@ -42,6 +48,12 @@ export async function executeProposedAction(
   };
 
   const idempotencyKey = proposedAction.idempotencyKey ?? randomUUID();
+  const auth = await resolveActingUserGitLabAuth();
+  const gitlabConfig = {
+    auth,
+    projectId: proposedAction.repository.gitlabProjectId,
+    baseUrl: getGitLabBaseUrl()
+  };
 
   await prisma.proposedAction.update({
     where: { id: proposedAction.id },
@@ -56,7 +68,7 @@ export async function executeProposedAction(
       proposedActionId: proposedAction.id,
       repositoryId: proposedAction.repositoryId,
       status: "PENDING",
-      gitlabProjectId: config.projectId,
+      gitlabProjectId: proposedAction.repository.gitlabProjectId,
       idempotencyKey
     }
   });
@@ -68,7 +80,7 @@ export async function executeProposedAction(
         description: template.description,
         labels: template.labels ?? ["warden"]
       },
-      config
+      gitlabConfig
     );
 
     await prisma.$transaction([

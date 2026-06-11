@@ -3,7 +3,8 @@ import { notFound } from "next/navigation";
 import { FindingsList } from "@/components/findings-list";
 import { ProposalsList } from "@/components/proposals-list";
 import { APP_NAME } from "@warden/contracts";
-import { prisma } from "@/lib/db";
+import { getScanForUser } from "@/lib/services/get-scan-for-user";
+import { ResourceNotFoundError } from "@/lib/services/resource-not-found-error";
 
 export const dynamic = "force-dynamic";
 
@@ -14,22 +15,16 @@ type ScanPageProps = {
 export default async function ScanDetailPage({ params }: ScanPageProps) {
   const { scanId } = await params;
 
-  const scan = await prisma.scan.findUnique({
-    where: { id: scanId },
-    include: {
-      repository: true,
-      findings: {
-        orderBy: { priorityScore: "desc" }
-      },
-      proposedActions: {
-        orderBy: { priorityScore: "desc" },
-        include: { issueCreation: true }
-      }
-    }
-  });
+  let scan;
 
-  if (!scan) {
-    notFound();
+  try {
+    scan = await getScanForUser(scanId);
+  } catch (error) {
+    if (error instanceof ResourceNotFoundError) {
+      notFound();
+    }
+
+    throw error;
   }
 
   const findings = scan.findings.map((finding) => ({

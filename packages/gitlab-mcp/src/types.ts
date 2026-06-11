@@ -1,3 +1,15 @@
+import type { GitLabAuth } from "./auth";
+
+export type { GitLabAuth, GitLabOAuthAuth, GitLabPatAuth } from "./auth";
+
+export type GitLabCollectContextInput = {
+  gitlabProjectId: number;
+  /** Used only when gitlab.get_project fails. GitLab API is the source of truth. */
+  fallbackDefaultBranch?: string;
+  /** When omitted, requests use GITLAB_PAT from the environment. */
+  auth?: GitLabAuth;
+};
+
 export type McpAuditEntry = {
   tool: string;
   durationMs: number;

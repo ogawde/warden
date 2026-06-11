@@ -7,15 +7,17 @@ import { getScanConfig } from "./config";
 import { readRepositorySnapshot } from "./repository-reader";
 import type { StaticAnalysisResult } from "./types";
 
-export async function runStaticAnalysis(): Promise<StaticAnalysisResult> {
+export async function runStaticAnalysis(
+  repoLocalPath: string
+): Promise<StaticAnalysisResult> {
   const config = getScanConfig();
-  const snapshot = await readRepositorySnapshot(config.repoLocalPath);
+  const snapshot = await readRepositorySnapshot(repoLocalPath);
 
   const findings = [
     ...analyzeMissingTests(snapshot),
     ...analyzeMaintainability(snapshot, config.maxFileLines),
     ...analyzeTechnicalDebt(snapshot),
-    ...(await analyzeRiskyChange(config.repoLocalPath)),
+    ...(await analyzeRiskyChange(repoLocalPath)),
     ...analyzeCiCdStub()
   ];
 
@@ -26,7 +28,7 @@ export async function runStaticAnalysis(): Promise<StaticAnalysisResult> {
     audit: [
       {
         tool: "static.scan_file_tree",
-        summary: `Scanned ${snapshot.files.length} files at ${config.repoLocalPath}`
+        summary: `Scanned ${snapshot.files.length} files at ${repoLocalPath}`
       },
       {
         tool: "static.detect_missing_tests",

@@ -8,6 +8,7 @@
     "start": "tsx src/index.ts"
   },
   "dependencies": {
+    "@warden/auth": "file:../../packages/auth",
     "@warden/db": "file:../../packages/db",
     "@warden/scan": "file:../../packages/scan",
     "dotenv": "16.4.7"

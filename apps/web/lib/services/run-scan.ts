@@ -1,5 +1,6 @@
+import { getSessionUser } from "@/lib/auth/get-session-user";
+import { resolveActiveRepository } from "@/lib/services/resolve-active-repository";
 import { enqueueScanJob } from "@/lib/worker/enqueue-scan";
-import { getGitLabConfig } from "@/lib/gitlab/config";
 import { prisma } from "@/lib/db";
 
 export type QueueScanResult = {
@@ -8,21 +9,19 @@ export type QueueScanResult = {
 };
 
 export async function runScan(): Promise<QueueScanResult> {
-  const gitlabConfig = getGitLabConfig();
-
-  const repository = await prisma.repository.findFirst({
-    where: { gitlabProjectId: gitlabConfig.projectId }
-  });
+  const user = await getSessionUser();
+  const repository = await resolveActiveRepository();
 
   if (!repository) {
     throw new Error(
-      `No repository found for GITLAB_PROJECT_ID=${gitlabConfig.projectId}. Run db:seed.`
+      "No active repository found. Run db:seed or select a repository."
     );
   }
 
   const scan = await prisma.scan.create({
     data: {
       repositoryId: repository.id,
+      triggeredById: user?.id ?? null,
       status: "QUEUED",
       trigger: "MANUAL",
       agentStatus: "QUEUED",

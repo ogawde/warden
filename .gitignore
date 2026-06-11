@@ -7,7 +7,6 @@ build
 .env.*.local
 coverage
 *.log
-package-lock.json
 apps/web/.next
 packages/db/generated
 requirements.txt
@@ -17,4 +16,3 @@ requirements.txt
 .env.development.local
 .env.test.local
 .env.production.local
-cloud-run-deploy.md

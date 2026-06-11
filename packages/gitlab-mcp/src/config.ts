@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { config } from "dotenv";
+import type { GitLabAuth, GitLabPatAuth } from "./auth";
 
 let loaded = false;
 
@@ -26,7 +27,7 @@ function loadEnv(): void {
 }
 
 export type GitLabMcpConfig = {
-  pat: string;
+  auth: GitLabAuth;
   projectId: number;
   baseUrl: string;
 };
@@ -62,8 +63,19 @@ export function getGitLabMcpConfig(): GitLabMcpConfig {
   }
 
   return {
-    pat,
+    auth: { type: "pat", token: pat },
     projectId,
     baseUrl: baseUrl.replace(/\/$/, "")
   };
+}
+
+export function getDefaultGitLabPatAuth(): GitLabPatAuth {
+  loadEnv();
+
+  const pat = readEnv("GITLAB_PAT");
+  if (!pat) {
+    throw new Error("GITLAB_PAT is not set");
+  }
+
+  return { type: "pat", token: pat };
 }

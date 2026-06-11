@@ -9,8 +9,10 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@warden/auth": "file:../../packages/auth",
     "@warden/contracts": "file:../../packages/contracts",
     "@warden/db": "file:../../packages/db",
+    "@warden/gitlab-mcp": "file:../../packages/gitlab-mcp",
     "@warden/scan": "file:../../packages/scan",
     "dotenv": "16.4.7",
     "iron-session": "8.0.4",

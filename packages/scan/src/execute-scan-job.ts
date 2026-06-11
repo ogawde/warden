@@ -1,13 +1,16 @@
 import {
   buildAnalysisContext,
   GitLabMcpAdapter,
+  type GitLabAuth,
   type GitLabMcpContext
 } from "@warden/gitlab-mcp";
 import { prisma, Prisma } from "@warden/db";
+import { checkoutRepository } from "./checkout-repository";
 import { deriveMcpFindings } from "./derive-mcp-findings";
 import { getScanConfig } from "./config";
 import { runAgentReasoning } from "./run-agent-reasoning";
 import { mergeStaticAndMcpFindings } from "./merge-findings";
+import { resolveScanGitLabAuth } from "./resolve-scan-gitlab-auth";
 import { runStaticAnalysis } from "./run-static-analysis";
 
 export type ExecuteScanJobInput = {
@@ -48,14 +51,18 @@ async function recordMcpToolEvents(
   );
 }
 
-async function collectMcpContext(repository: {
-  gitlabProjectId: number;
-  defaultBranch: string;
-}): Promise<GitLabMcpContext> {
+async function collectMcpContext(
+  repository: {
+    gitlabProjectId: number;
+    defaultBranch: string;
+  },
+  auth?: GitLabAuth
+): Promise<GitLabMcpContext> {
   try {
     return await new GitLabMcpAdapter().collectContext({
       gitlabProjectId: repository.gitlabProjectId,
-      fallbackDefaultBranch: repository.defaultBranch
+      fallbackDefaultBranch: repository.defaultBranch,
+      auth
     });
   } catch (error) {
     const message =
@@ -87,7 +94,10 @@ export async function executeScanJob(
 
   const scan = await prisma.scan.findUnique({
     where: { id: scanId },
-    include: { repository: true }
+    include: {
+      repository: true,
+      triggeredBy: true
+    }
   });
 
   if (!scan || scan.repositoryId !== repositoryId) {
@@ -121,28 +131,52 @@ export async function executeScanJob(
     };
   }
 
-  await prisma.activityEvent.create({
-    data: {
-      repositoryId,
-      scanId,
-      actorType: "SYSTEM",
-      verb: "SCAN_STARTED",
-      summary: "Scan started"
-    }
-  });
-
   const scanConfig = getScanConfig();
   const repository = scan.repository;
+  let headCommitSha: string | undefined;
+  let checkoutBranch: string | undefined;
 
   try {
-    const staticAnalysis = await runStaticAnalysis();
+    const auth = await resolveScanGitLabAuth(scan);
+    const checkout = await checkoutRepository({
+      scan,
+      repository,
+      auth
+    });
+    const { localPath, cleanup } = checkout;
+    headCommitSha = checkout.headCommitSha;
+    checkoutBranch = checkout.checkoutBranch;
+
+    try {
+      if (headCommitSha) {
+        await prisma.scan.update({
+          where: { id: scanId },
+          data: { headCommitSha }
+        });
+      }
+
+      await prisma.activityEvent.create({
+        data: {
+          repositoryId,
+          scanId,
+          actorType: "SYSTEM",
+          verb: "SCAN_STARTED",
+          summary: "Scan started",
+          metadata: {
+            pathWithNamespace: repository.pathWithNamespace,
+            ...(checkoutBranch ? { branch: checkoutBranch } : {})
+          }
+        }
+      });
+
+      const staticAnalysis = await runStaticAnalysis(localPath);
 
     await prisma.scan.update({
       where: { id: scanId },
       data: { agentStatus: "MCP_CONTEXT_GATHER" }
     });
 
-    const mcpContext = await collectMcpContext(repository);
+    const mcpContext = await collectMcpContext(repository, auth);
     await recordMcpToolEvents(scanId, repositoryId, mcpContext.audit);
 
     const gitlabDefaultBranch =
@@ -293,7 +327,11 @@ export async function executeScanJob(
           mcpAudit,
           contextSnapshot: {
             ...analysisContext,
-            repoPath: scanConfig.repoLocalPath,
+            repoPath: localPath,
+            pathWithNamespace: repository.pathWithNamespace,
+            gitlabProjectId: repository.gitlabProjectId,
+            headCommitSha: headCommitSha ?? null,
+            checkoutBranch: checkoutBranch ?? null,
             agentReasoning: agentResult.agentReasoning
           }
         }
@@ -304,7 +342,11 @@ export async function executeScanJob(
           scanId,
           actorType: "SYSTEM",
           verb: "SCAN_COMPLETED",
-          summary: `Scan completed with ${findingRecords.length} findings`
+          summary: `Scan completed with ${findingRecords.length} findings`,
+          metadata: {
+            pathWithNamespace: repository.pathWithNamespace,
+            ...(headCommitSha ? { headCommitSha } : {})
+          }
         }
       }),
       prisma.activityEvent.create({
@@ -318,12 +360,24 @@ export async function executeScanJob(
       })
     ]);
 
-    return {
-      scanId,
-      findingCount: findingRecords.length,
-      proposalCount: proposalDrafts.length,
-      status: "COMPLETED"
-    };
+      return {
+        scanId,
+        findingCount: findingRecords.length,
+        proposalCount: proposalDrafts.length,
+        status: "COMPLETED"
+      };
+    } finally {
+      try {
+        await cleanup();
+      } catch (cleanupError) {
+        console.warn(
+          "Checkout cleanup failed:",
+          cleanupError instanceof Error
+            ? cleanupError.message
+            : cleanupError
+        );
+      }
+    }
   } catch (error) {
     const message = error instanceof Error ? error.message : "Scan failed";
 
@@ -342,7 +396,11 @@ export async function executeScanJob(
           scanId,
           actorType: "SYSTEM",
           verb: "SCAN_FAILED",
-          summary: message
+          summary: message,
+          metadata: {
+            pathWithNamespace: repository.pathWithNamespace,
+            ...(headCommitSha ? { headCommitSha } : {})
+          }
         }
       })
     ]);

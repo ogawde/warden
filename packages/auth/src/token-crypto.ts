@@ -1,5 +1,5 @@
 import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
-import { loadRootEnv } from "@/lib/load-root-env";
+import { loadEnv } from "./load-env";
 
 const ALGORITHM = "aes-256-gcm";
 const IV_LENGTH = 12;
@@ -7,7 +7,7 @@ const KEY_LENGTH = 32;
 const VERSION_PREFIX = "v1";
 
 function getEncryptionKey(): Buffer {
-  loadRootEnv();
+  loadEnv();
 
   const raw = process.env.TOKEN_ENCRYPTION_KEY?.trim();
   if (!raw) {

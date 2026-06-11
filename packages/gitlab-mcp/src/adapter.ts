@@ -4,6 +4,7 @@
  */
 import { gitlabRestRequest } from "./rest-client";
 import type {
+  GitLabCollectContextInput,
   GitLabCommitSummary,
   GitLabMcpContext,
   GitLabMergeRequestSummary,
@@ -11,12 +12,6 @@ import type {
   GitLabProjectMetadata,
   McpAuditEntry
 } from "./types";
-
-type RepositoryInput = {
-  gitlabProjectId: number;
-  /** Used only when gitlab.get_project fails. GitLab API is the source of truth. */
-  fallbackDefaultBranch?: string;
-};
 
 type GitLabProjectResponse = {
   id: number;
@@ -97,16 +92,20 @@ function projectPath(projectId: number): string {
 }
 
 export class GitLabMcpAdapter {
-  async collectContext(repository: RepositoryInput): Promise<GitLabMcpContext> {
+  async collectContext(
+    repository: GitLabCollectContextInput
+  ): Promise<GitLabMcpContext> {
     const audit: McpAuditEntry[] = [];
     const projectId = repository.gitlabProjectId;
+    const requestOptions = repository.auth ? { auth: repository.auth } : {};
     let callCount = 0;
 
     const projectCall = await invokeTool(
       "gitlab.get_project",
       () =>
         gitlabRestRequest<GitLabProjectResponse>(
-          `/projects/${projectPath(projectId)}`
+          `/projects/${projectPath(projectId)}`,
+          requestOptions
         ),
       (project) => `${project.path_with_namespace} (${project.default_branch})`
     );
@@ -126,7 +125,8 @@ export class GitLabMcpAdapter {
       "gitlab.list_merge_requests",
       () =>
         gitlabRestRequest<GitLabMergeRequestResponse[]>(
-          `/projects/${projectPath(projectId)}/merge_requests?state=opened&per_page=10&order_by=updated_at&sort=desc`
+          `/projects/${projectPath(projectId)}/merge_requests?state=opened&per_page=10&order_by=updated_at&sort=desc`,
+          requestOptions
         ),
       (mrs) => {
         const failed = mrs.filter(
@@ -146,7 +146,8 @@ export class GitLabMcpAdapter {
       "gitlab.get_pipeline",
       () =>
         gitlabRestRequest<GitLabPipelineResponse[]>(
-          `/projects/${projectPath(projectId)}/pipelines?ref=${encodeURIComponent(defaultBranch)}&per_page=1&order_by=id&sort=desc`
+          `/projects/${projectPath(projectId)}/pipelines?ref=${encodeURIComponent(defaultBranch)}&per_page=1&order_by=id&sort=desc`,
+          requestOptions
         ).then((pipelines) => pipelines[0] ?? null),
       (pipeline) =>
         pipeline
@@ -164,7 +165,8 @@ export class GitLabMcpAdapter {
       "gitlab.list_commits",
       () =>
         gitlabRestRequest<GitLabCommitResponse[]>(
-          `/projects/${projectPath(projectId)}/repository/commits?ref_name=${encodeURIComponent(defaultBranch)}&per_page=20`
+          `/projects/${projectPath(projectId)}/repository/commits?ref_name=${encodeURIComponent(defaultBranch)}&per_page=20`,
+          requestOptions
         ),
       (commits) => `${commits.length} commits on ${defaultBranch}`
     );
@@ -188,7 +190,8 @@ export class GitLabMcpAdapter {
         "gitlab.get_pipeline",
         () =>
           gitlabRestRequest<GitLabPipelineResponse[]>(
-            `/projects/${projectPath(projectId)}/merge_requests/${mr.iid}/pipelines?per_page=1`
+            `/projects/${projectPath(projectId)}/merge_requests/${mr.iid}/pipelines?per_page=1`,
+            requestOptions
           ).then((pipelines) => pipelines[0] ?? null),
         (pipeline) =>
           pipeline

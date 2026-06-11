@@ -1,5 +1,5 @@
-import { decryptToken } from "@/lib/auth/token-crypto";
 import type { User } from "@warden/db";
+import { decryptToken } from "./token-crypto";
 
 export function getUserGitLabAccessToken(user: User): string {
   if (!user.accessTokenEnc) {

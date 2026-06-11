@@ -1,9 +1,11 @@
+import { buildGitLabAuthHeaders, type GitLabAuth } from "./auth";
 import { getGitLabMcpConfig, type GitLabMcpConfig } from "./config";
 
 type GitLabRequestOptions = {
   method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   body?: Record<string, unknown>;
   config?: GitLabMcpConfig;
+  auth?: GitLabAuth;
 };
 
 export async function gitlabRestRequest<T>(
@@ -11,12 +13,13 @@ export async function gitlabRestRequest<T>(
   options: GitLabRequestOptions = {}
 ): Promise<T> {
   const config = options.config ?? getGitLabMcpConfig();
+  const auth = options.auth ?? config.auth;
   const url = `${config.baseUrl}/api/v4${path}`;
 
   const response = await fetch(url, {
     method: options.method ?? "GET",
     headers: {
-      "PRIVATE-TOKEN": config.pat,
+      ...buildGitLabAuthHeaders(auth),
       "Content-Type": "application/json"
     },
     body: options.body ? JSON.stringify(options.body) : undefined

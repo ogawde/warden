@@ -1,4 +1,4 @@
-import { getUserGitLabAccessToken } from "@/lib/auth/get-user-gitlab-token";
+import { getValidGitLabAccessToken } from "@warden/auth";
 import { requireSession } from "@/lib/auth/get-session-user";
 import { listAccessibleGitLabProjects } from "@/lib/gitlab/list-projects";
 import { selectUserRepository } from "@/lib/services/select-user-repository";
@@ -84,7 +84,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const accessToken = getUserGitLabAccessToken(user);
+    const accessToken = await getValidGitLabAccessToken(user);
     const projects = await listAccessibleGitLabProjects(accessToken);
     const project = projects.find((entry) => entry.id === gitlabProjectId);
 

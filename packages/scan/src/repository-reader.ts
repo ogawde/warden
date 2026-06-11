@@ -1,5 +1,11 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import { getRepositoryLimits, getScanConfig } from "./config";
+import {
+  formatRepoFileCountLimitError,
+  formatRepoSizeLimitError,
+  type RepositoryLimits
+} from "./repository-limits";
 import type { RepoFile, ScanRepositorySnapshot } from "./types";
 
 const SKIP_DIRS = new Set([
@@ -30,10 +36,17 @@ function isTestFile(relativePath: string): boolean {
   );
 }
 
+type WalkState = {
+  files: RepoFile[];
+  totalBytes: number;
+  limits: RepositoryLimits;
+  maxRepoSizeMb: number;
+};
+
 async function walkDirectory(
   rootPath: string,
   currentPath: string,
-  files: RepoFile[]
+  state: WalkState
 ): Promise<void> {
   const entries = await fs.readdir(currentPath, { withFileTypes: true });
 
@@ -42,7 +55,7 @@ async function walkDirectory(
 
     if (entry.isDirectory()) {
       if (!SKIP_DIRS.has(entry.name)) {
-        await walkDirectory(rootPath, fullPath, files);
+        await walkDirectory(rootPath, fullPath, state);
       }
       continue;
     }
@@ -56,11 +69,28 @@ async function walkDirectory(
       continue;
     }
 
+    const stat = await fs.stat(fullPath);
+
+    if (stat.size > state.limits.maxFileSizeBytes) {
+      continue;
+    }
+
+    if (state.files.length >= state.limits.maxRepoFiles) {
+      throw new Error(
+        formatRepoFileCountLimitError(state.limits.maxRepoFiles)
+      );
+    }
+
+    if (state.totalBytes + stat.size > state.limits.maxRepoSizeBytes) {
+      throw new Error(formatRepoSizeLimitError(state.maxRepoSizeMb));
+    }
+
     const relativePath = path.relative(rootPath, fullPath).replace(/\\/g, "/");
     const content = await fs.readFile(fullPath, "utf8");
     const lineCount = content.split("\n").length;
 
-    files.push({
+    state.totalBytes += stat.size;
+    state.files.push({
       relativePath,
       lineCount,
       content: isTestFile(relativePath) ? undefined : content
@@ -79,13 +109,21 @@ export async function readRepositorySnapshot(
     );
   }
 
-  const files: RepoFile[] = [];
-  await walkDirectory(rootPath, rootPath, files);
+  const scanConfig = getScanConfig();
+  const limits = getRepositoryLimits();
+  const state: WalkState = {
+    files: [],
+    totalBytes: 0,
+    limits,
+    maxRepoSizeMb: scanConfig.maxRepoSizeMb
+  };
+
+  await walkDirectory(rootPath, rootPath, state);
 
   return {
     rootPath,
-    files,
-    filePathSet: new Set(files.map((file) => file.relativePath))
+    files: state.files,
+    filePathSet: new Set(state.files.map((file) => file.relativePath))
   };
 }
 

@@ -15,6 +15,7 @@
     "lint": "npm run lint -w @warden/web",
     "db:generate": "npm run generate -w @warden/db",
     "db:migrate": "npm run migrate -w @warden/db",
+    "db:migrate:deploy": "npm run migrate:deploy -w @warden/db",
     "db:seed": "npm run seed -w @warden/db"
   }
 }

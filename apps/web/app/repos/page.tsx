@@ -1,4 +1,4 @@
-import { getUserGitLabAccessToken } from "@/lib/auth/get-user-gitlab-token";
+import { getValidGitLabAccessToken } from "@warden/auth";
 import { requireSession } from "@/lib/auth/get-session-user";
 import { listAccessibleGitLabProjects } from "@/lib/gitlab/list-projects";
 import { redirect } from "next/navigation";
@@ -17,7 +17,7 @@ export default async function ReposPage() {
   let projects;
 
   try {
-    const accessToken = getUserGitLabAccessToken(user);
+    const accessToken = await getValidGitLabAccessToken(user);
     projects = await listAccessibleGitLabProjects(accessToken);
   } catch {
     return (

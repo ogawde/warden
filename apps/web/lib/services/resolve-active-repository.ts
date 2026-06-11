@@ -2,6 +2,7 @@ import { getSessionUser } from "@/lib/auth/get-session-user";
 import { getGitLabConfig } from "@/lib/gitlab/config";
 import type { Repository } from "@warden/db";
 import { prisma } from "@/lib/db";
+import { assertRepositoryOwnedByUser } from "./assert-repository-ownership";
 
 export async function resolveActiveRepository(): Promise<Repository | null> {
   const user = await getSessionUser();
@@ -17,7 +18,7 @@ export async function resolveActiveRepository(): Promise<Repository | null> {
     });
   }
 
-  return prisma.repository.findFirst({
+  const repository = await prisma.repository.findFirst({
     where: {
       userId: user.id,
       selectedAt: {
@@ -28,4 +29,10 @@ export async function resolveActiveRepository(): Promise<Repository | null> {
       selectedAt: "desc"
     }
   });
+
+  if (repository) {
+    assertRepositoryOwnedByUser(repository, user);
+  }
+
+  return repository;
 }
